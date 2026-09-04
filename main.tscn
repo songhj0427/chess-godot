@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bqjusa3sks5ll"]
+
+[ext_resource type="Script" uid="uid://nkcb0nkbulas" path="res://main.gd" id="1_ig7tw"]
+
+[node name="Main" type="Node2D" unique_id=1134712690]
+script = ExtResource("1_ig7tw")
+
+[node name="BoardVisual" type="Node2D" parent="." unique_id=2105144033]
+
+[node name="PieceVisual" type="Node2D" parent="." unique_id=424848591]
+
+[node name="HighlightVisual" type="Node2D" parent="." unique_id=697246658]
