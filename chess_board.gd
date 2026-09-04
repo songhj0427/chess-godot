@@ -126,11 +126,15 @@ func setup_initial() -> void:
 	clear()
 	turn = Piece.Side.WHITE
 	move_count = 0
-	for col in SIZE:
-		set_piece(Vector2i(col, 0), Piece.new(BACK_RANK[col], Piece.Side.BLACK))
-		set_piece(Vector2i(col, 1), Piece.new(Piece.Type.PAWN, Piece.Side.BLACK))
-		set_piece(Vector2i(col, 6), Piece.new(Piece.Type.PAWN, Piece.Side.WHITE))
-		set_piece(Vector2i(col, 7), Piece.new(BACK_RANK[col], Piece.Side.WHITE))
+	set_piece(Vector2i(4, 7), Piece.new(Piece.Type.KING, Piece.Side.WHITE))    # e1
+	set_piece(Vector2i(4, 5), Piece.new(Piece.Type.BISHOP, Piece.Side.WHITE))  # e3
+	set_piece(Vector2i(4, 0), Piece.new(Piece.Type.ROOK, Piece.Side.BLACK))    # e8
+	set_piece(Vector2i(0, 0), Piece.new(Piece.Type.KING, Piece.Side.BLACK))    # a8
+	#for col in SIZE:
+		#set_piece(Vector2i(col, 0), Piece.new(BACK_RANK[col], Piece.Side.BLACK))
+		#set_piece(Vector2i(col, 1), Piece.new(Piece.Type.PAWN, Piece.Side.BLACK))
+		#set_piece(Vector2i(col, 6), Piece.new(Piece.Type.PAWN, Piece.Side.WHITE))
+		#set_piece(Vector2i(col, 7), Piece.new(BACK_RANK[col], Piece.Side.WHITE))
 
 func get_piece(pos: Vector2i) -> Piece:
 	if not is_inside(pos):
@@ -156,3 +160,58 @@ func move_piece(from: Vector2i, to: Vector2i) -> void:
 	set_piece(to, piece)
 	set_piece(from, null)
 	piece.has_moved = true
+	
+func copy() -> ChessBoard:
+	var c := ChessBoard.new()
+	c.clear()
+	for row in SIZE:
+		for col in SIZE:
+			var piece: Piece = board[row][col]
+			if piece != null:
+				c.board[row][col] = piece.copy()
+	c.turn = turn
+	c.move_count = move_count
+	return c
+	
+func find_king(side: Piece.Side) -> Vector2i:
+	for row in SIZE:
+		for col in SIZE:
+			var piece: Piece = board[row][col]
+			if piece != null and piece.side == side and piece.type == Piece.Type.KING:
+				return Vector2i(col, row)
+	return Vector2i(-1, -1)
+
+func is_attacked(pos: Vector2i, by_side: Piece.Side) -> bool:
+	for row in SIZE:
+		for col in SIZE:
+			var from := Vector2i(col, row)
+			var piece := get_piece(from)
+			if piece == null or piece.side != by_side:
+				continue
+			if pos in get_moves(from):
+				return true
+	return false
+
+func is_in_check(side: Piece.Side) -> bool:
+	var king_pos := find_king(side)
+	if not is_inside(king_pos):
+		return false
+	return is_attacked(king_pos, opponent(side))
+
+func opponent(side: Piece.Side) -> Piece.Side:
+	return Piece.Side.BLACK if side == Piece.Side.WHITE else Piece.Side.WHITE
+	
+func get_legal_moves(from: Vector2i) -> Array[Vector2i]:
+	var piece := get_piece(from)
+	if piece == null:
+		return []
+	
+	var result: Array[Vector2i] = []
+	
+	for to in get_moves(from):
+		var test := copy()
+		test.move_piece(from, to)
+		if not test.is_in_check(piece.side):
+			result.append(to)
+	
+	return result

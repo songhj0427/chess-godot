@@ -50,6 +50,8 @@ var textures: Dictionary = {}
 const COLOR_MOVE := Color(0.2, 0.5, 0.2, 0.35)
 const COLOR_CAPTURE := Color(0.8, 0.2, 0.2, 0.4)
 
+const COLOR_CHECK := Color(0.9, 0.1, 0.1, 0.45)
+
 func board_to_screen(pos: Vector2i) -> Vector2:
 	return BOARD_OFFSET + Vector2(pos) * SQUARE_SIZE
 
@@ -78,7 +80,10 @@ func _refresh() -> void:
 	
 func _update_ui() -> void:
 	var side_name: String = "백" if chess_board.turn == Piece.Side.WHITE else "흑"
-	%TurnLabel.text = "%s 차례 (%d수)" % [side_name, chess_board.move_count]
+	var text := "%s 차례 (%d수)" % [side_name, chess_board.move_count]
+	if chess_board.is_in_check(chess_board.turn):
+		text += "  — 체크!"
+	%TurnLabel.text = text
 	
 func _update_pieces() -> void:
 	for child in piece_visual.get_children():
@@ -146,7 +151,7 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	
 func _select(cell: Vector2i) -> void:
 	selected = cell
-	legal_moves = chess_board.get_moves(cell)
+	legal_moves = chess_board.get_legal_moves(cell)
 	
 func _deselect() -> void:
 	selected = Vector2i(-1, -1)
@@ -155,6 +160,11 @@ func _deselect() -> void:
 func _update_highlight() -> void:
 	for child in highlight_visual.get_children():
 		child.queue_free()
+		
+	if chess_board.is_in_check(chess_board.turn):
+		var king_pos := chess_board.find_king(chess_board.turn)
+		if chess_board.is_inside(king_pos):
+			_add_highlight(king_pos, COLOR_CHECK)
 		
 	if not is_inside(selected):
 		return
