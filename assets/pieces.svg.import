@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://7url8oxi44kc"
-path="res://.godot/imported/Chess_Pieces_Sprite.svg.webp-f43cfb2e92ae00b0ecb791d2600e507c.ctex"
+uid="uid://do8utwulpa28v"
+path="res://.godot/imported/pieces.svg-cb250fc409d79d505491ad585c028b3e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/pieces/Chess_Pieces_Sprite.svg.webp"
-dest_files=["res://.godot/imported/Chess_Pieces_Sprite.svg.webp-f43cfb2e92ae00b0ecb791d2600e507c.ctex"]
+source_file="res://assets/pieces.svg"
+dest_files=["res://.godot/imported/pieces.svg-cb250fc409d79d505491ad585c028b3e.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

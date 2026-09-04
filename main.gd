@@ -10,8 +10,41 @@ const COLOR_SELECT := Color(0.4, 0.8, 0.4, 0.5)
 
 @onready var board_visual: Node2D = $BoardVisual
 @onready var highlight_visual: Node2D = $HighlightVisual
+@onready var piece_visual: Node2D = $PieceVisual
+
+var chess_board := ChessBoard.new()
 
 var selected: Vector2i = Vector2i(-1, -1)
+
+const SHEET_PATH := "res://assets/pieces.svg"
+const SHEET_COLS := 6
+const SHEET_ROWS := 2
+
+const TYPE_NAMES := {
+	Piece.Type.PAWN: "pawn",
+	Piece.Type.KNIGHT: "knight",
+	Piece.Type.BISHOP: "bishop",
+	Piece.Type.ROOK: "rook",
+	Piece.Type.QUEEN: "queen",
+	Piece.Type.KING: "king",
+}
+
+const SIDE_NAMES := {
+	Piece.Side.WHITE: "white",
+	Piece.Side.BLACK: "black",
+}
+
+const SHEET_ORDER := [
+	Piece.Type.KING, Piece.Type.QUEEN, Piece.Type.BISHOP,
+	Piece.Type.KNIGHT, Piece.Type.ROOK, Piece.Type.PAWN,
+]
+
+const SHEET_SIDE_ROW := {
+	Piece.Side.WHITE: 0,
+	Piece.Side.BLACK: 1,
+}
+
+var textures: Dictionary = {}
 
 func board_to_screen(pos: Vector2i) -> Vector2:
 	return BOARD_OFFSET + Vector2(pos) * SQUARE_SIZE
@@ -30,7 +63,33 @@ func to_algebraic(pos: Vector2i) -> String:
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	_load_textures()
 	_create_board()
+	_update_pieces()
+	
+func _update_pieces() -> void:
+	for child in piece_visual.get_children():
+		child.queue_free()
+	
+	for row in ChessBoard.SIZE:
+		for col in ChessBoard.SIZE:
+			var pos := Vector2i(col, row)
+			var piece := chess_board.get_piece(pos)
+			if piece == null:
+				continue
+			_spawn_piece_sprite(piece, pos)
+
+func _spawn_piece_sprite(piece: Piece, pos: Vector2i) -> void:
+	var key: String = "%s_%s" % [SIDE_NAMES[piece.side], TYPE_NAMES[piece.type]]
+	var sprite := Sprite2D.new()
+	sprite.texture = textures[key]
+	sprite.position = board_to_screen(pos) + Vector2.ONE * SQUARE_SIZE * 0.5
+	
+	var tex_size := sprite.texture.get_size()
+	var fit := SQUARE_SIZE * 0.85 / maxf(tex_size.x, tex_size.y)
+	sprite.scale = Vector2.ONE * fit
+	
+	piece_visual.add_child(sprite)
 	
 func _create_board() -> void:
 	for row in BOARD_SIZE:
@@ -55,7 +114,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_cell_clicked(cell: Vector2i) -> void:
 	selected = cell
 	_update_highlight()
-	print(cell, " = ", to_algebraic(cell))
+	
+	var piece := chess_board.get_piece(cell)
+	if piece == null:
+		print(to_algebraic(cell), " : 빈 칸")
+	else:
+		print(to_algebraic(cell), " : ", SIDE_NAMES[piece.side], " ", TYPE_NAMES[piece.type])
 
 func _update_highlight() -> void:
 	for child in highlight_visual.get_children():
@@ -71,6 +135,24 @@ func _update_highlight() -> void:
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	highlight_visual.add_child(rect)
 	
+func _load_textures() -> void:
+	var sheet: Texture2D = load(SHEET_PATH)
+	var cell := Vector2(
+		sheet.get_width() / float(SHEET_COLS),
+		sheet.get_height() / float(SHEET_ROWS)
+	)
+	
+	for side in SHEET_SIDE_ROW:
+		for col in SHEET_ORDER.size():
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(
+				Vector2(col, SHEET_SIDE_ROW[side]) * cell,
+				cell
+			)
+			
+			var key: String = "%s_%s" % [SIDE_NAMES[side], TYPE_NAMES[SHEET_ORDER[col]]]
+			textures[key] = atlas
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
