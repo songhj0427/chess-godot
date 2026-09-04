@@ -65,7 +65,16 @@ func to_algebraic(pos: Vector2i) -> String:
 func _ready() -> void:
 	_load_textures()
 	_create_board()
+	_refresh()
+	
+func _refresh() -> void:
 	_update_pieces()
+	_update_highlight()
+	_update_ui()
+	
+func _update_ui() -> void:
+	var side_name: String = "백" if chess_board.turn == Piece.Side.WHITE else "흑"
+	%TurnLabel.text = "%s 차례 (%d수)" % [side_name, chess_board.move_count]
 	
 func _update_pieces() -> void:
 	for child in piece_visual.get_children():
@@ -112,14 +121,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_cell_clicked(cell)
 		
 func _on_cell_clicked(cell: Vector2i) -> void:
-	selected = cell
-	_update_highlight()
+	var clicked_piece := chess_board.get_piece(cell)
 	
-	var piece := chess_board.get_piece(cell)
-	if piece == null:
-		print(to_algebraic(cell), " : 빈 칸")
+	if not is_inside(selected):
+		# 상태 1: 선택 없음 — 고르기
+		if clicked_piece != null and clicked_piece.side == chess_board.turn:
+			selected = cell
 	else:
-		print(to_algebraic(cell), " : ", SIDE_NAMES[piece.side], " ", TYPE_NAMES[piece.type])
+		# 상태 2: 선택 있음
+		if cell == selected:
+			selected = Vector2i(-1, -1)                     # 같은 칸 → 선택 해제
+		elif clicked_piece != null and clicked_piece.side == chess_board.turn:
+			selected = cell                                 # 내 다른 기물 → 선택 변경
+		else:
+			chess_board.move_piece(selected, cell)          # 그 외 → 이동
+			chess_board.switch_turn()
+			selected = Vector2i(-1, -1)
+	
+	_refresh()
 
 func _update_highlight() -> void:
 	for child in highlight_visual.get_children():

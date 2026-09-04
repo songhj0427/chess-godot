@@ -10,6 +10,13 @@ const BACK_RANK := [
 
 var board: Array = []
 
+var turn: Piece.Side = Piece.Side.WHITE
+var move_count: int = 0
+
+func switch_turn() -> void:
+	turn = Piece.Side.BLACK if turn == Piece.Side.WHITE else Piece.Side.WHITE
+	move_count += 1
+
 func _init() -> void:
 	setup_initial()
 
@@ -22,6 +29,8 @@ func clear() -> void:
 
 func setup_initial() -> void:
 	clear()
+	turn = Piece.Side.WHITE
+	move_count = 0
 	for col in SIZE:
 		set_piece(Vector2i(col, 0), Piece.new(BACK_RANK[col], Piece.Side.BLACK))
 		set_piece(Vector2i(col, 1), Piece.new(Piece.Type.PAWN, Piece.Side.BLACK))
@@ -43,3 +52,12 @@ func is_inside(pos: Vector2i) -> bool:
 
 func is_empty(pos: Vector2i) -> bool:
 	return get_piece(pos) == null
+
+func move_piece(from: Vector2i, to: Vector2i) -> void:
+	var piece := get_piece(from)
+	if piece == null:
+		return
+	
+	set_piece(to, piece)
+	set_piece(from, null)
+	piece.has_moved = true
