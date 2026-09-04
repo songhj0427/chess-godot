@@ -1,0 +1,8 @@
+# Godot 4+
+.godot/
+/android/
+
+# 내보낸 결과물
+/build/
+*.exe
+*.pck
