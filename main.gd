@@ -15,6 +15,7 @@ const COLOR_SELECT := Color(0.4, 0.8, 0.4, 0.5)
 var chess_board := ChessBoard.new()
 
 var selected: Vector2i = Vector2i(-1, -1)
+var legal_moves: Array[Vector2i] = []
 
 const SHEET_PATH := "res://assets/pieces.svg"
 const SHEET_COLS := 6
@@ -45,6 +46,9 @@ const SHEET_SIDE_ROW := {
 }
 
 var textures: Dictionary = {}
+
+const COLOR_MOVE := Color(0.2, 0.5, 0.2, 0.35)
+const COLOR_CAPTURE := Color(0.8, 0.2, 0.2, 0.4)
 
 func board_to_screen(pos: Vector2i) -> Vector2:
 	return BOARD_OFFSET + Vector2(pos) * SQUARE_SIZE
@@ -126,19 +130,27 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if not is_inside(selected):
 		# 상태 1: 선택 없음 — 고르기
 		if clicked_piece != null and clicked_piece.side == chess_board.turn:
-			selected = cell
+			_select(cell)
 	else:
 		# 상태 2: 선택 있음
 		if cell == selected:
-			selected = Vector2i(-1, -1)                     # 같은 칸 → 선택 해제
+			_deselect()      				              # 같은 칸 → 선택 해제
 		elif clicked_piece != null and clicked_piece.side == chess_board.turn:
-			selected = cell                                 # 내 다른 기물 → 선택 변경
-		else:
-			chess_board.move_piece(selected, cell)          # 그 외 → 이동
+			_select(cell)                                 # 내 다른 기물 → 선택 변경
+		elif cell in legal_moves:
+			chess_board.move_piece(selected, cell)        # 그 외 → 이동
 			chess_board.switch_turn()
-			selected = Vector2i(-1, -1)
+			_deselect()
 	
 	_refresh()
+	
+func _select(cell: Vector2i) -> void:
+	selected = cell
+	legal_moves = chess_board.get_moves(cell)
+	
+func _deselect() -> void:
+	selected = Vector2i(-1, -1)
+	legal_moves = []
 
 func _update_highlight() -> void:
 	for child in highlight_visual.get_children():
@@ -147,10 +159,17 @@ func _update_highlight() -> void:
 	if not is_inside(selected):
 		return
 		
+	_add_highlight(selected, COLOR_SELECT)
+	
+	for move in legal_moves:
+		var color := COLOR_CAPTURE if not chess_board.is_empty(move) else COLOR_MOVE
+		_add_highlight(move, color)
+	
+func _add_highlight(pos: Vector2i, color: Color) -> void:
 	var rect := ColorRect.new()
 	rect.size = Vector2(SQUARE_SIZE, SQUARE_SIZE)
-	rect.position = board_to_screen(selected)
-	rect.color = COLOR_SELECT
+	rect.position = board_to_screen(pos)
+	rect.color = color
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	highlight_visual.add_child(rect)
 	
