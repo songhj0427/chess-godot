@@ -20,3 +20,34 @@ offset_top = 20.0
 offset_right = 120.0
 offset_bottom = 43.0
 theme_override_font_sizes/font_size = 24
+
+[node name="PromotionPanel" type="Panel" parent="UI" unique_id=906651673]
+unique_name_in_owner = true
+visible = false
+offset_left = 68.0
+offset_top = 65.0
+offset_right = 760.0
+offset_bottom = 760.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/PromotionPanel" unique_id=1439680254]
+layout_mode = 0
+offset_left = 130.0
+offset_top = 199.0
+offset_right = 613.0
+offset_bottom = 522.0
+
+[node name="Queen" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=1958520696]
+layout_mode = 2
+text = "퀸"
+
+[node name="Rook" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=406574856]
+layout_mode = 2
+text = "룩"
+
+[node name="Bishop" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=2138790565]
+layout_mode = 2
+text = "비"
+
+[node name="Knight" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=670900820]
+layout_mode = 2
+text = "나이트"
