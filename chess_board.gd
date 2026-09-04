@@ -413,6 +413,12 @@ func copy() -> ChessBoard:
 	c.cached_result = cached_result
 	return c
 
+func snapshot() -> ChessBoard:
+	var c := copy()
+	c.position_history = position_history.duplicate()
+	c.cached_result = cached_result
+	return c
+
 # ─────────────────────────────────────────────
 # 국면 기록 (3회 반복 판정용)
 # ─────────────────────────────────────────────

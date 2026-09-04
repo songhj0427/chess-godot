@@ -14,6 +14,7 @@ const COLOR_SELECT := Color(0.4, 0.8, 0.4, 0.5)
 const COLOR_MOVE := Color(0.2, 0.5, 0.2, 0.35)
 const COLOR_CAPTURE := Color(0.8, 0.2, 0.2, 0.4)
 const COLOR_CHECK := Color(0.9, 0.1, 0.1, 0.45)
+const COLOR_LAST := Color(0.9, 0.8, 0.3, 0.3)
 
 # ─────────────────────────────────────────────
 # 기물 스프라이트 시트
@@ -47,6 +48,11 @@ const SHEET_SIDE_ROW := {
 	Piece.Side.BLACK: 1,
 }
 
+const PIECE_LETTERS := {
+	Piece.Type.PAWN: "", Piece.Type.KNIGHT: "N", Piece.Type.BISHOP: "B",
+	Piece.Type.ROOK: "R", Piece.Type.QUEEN: "Q", Piece.Type.KING: "K",
+}
+
 # ─────────────────────────────────────────────
 # 결과 문구
 # ─────────────────────────────────────────────
@@ -78,6 +84,9 @@ var selected: Vector2i = Vector2i(-1, -1)
 var legal_moves: Array[Vector2i] = []
 var textures: Dictionary = {}
 var awaiting_promotion: bool = false
+var history: Array[ChessBoard] = []
+var notations: Array[String] = []
+var last_move: Array[Vector2i] = []
 
 signal promotion_selected(type: Piece.Type)
 
@@ -102,6 +111,39 @@ func to_algebraic(pos: Vector2i) -> String:
 	var file := char("a".unicode_at(0) + pos.x)
 	var rank := 8 - pos.y
 	return file + str(rank)
+	
+func _to_notation(from: Vector2i, to: Vector2i, before: ChessBoard) -> String:
+	var piece := before.get_piece(from)
+	if piece == null:
+		return "?"
+	
+	# 캐슬링은 별도 표기
+	if piece.type == Piece.Type.KING and absi(to.x - from.x) == 2:
+		return "O-O" if to.x > from.x else "O-O-O"
+	
+	var is_capture := not before.is_empty(to) or to == before.en_passant_target
+	var text: String = PIECE_LETTERS[piece.type]
+	
+	# 폰이 잡을 때는 출발 파일을 앞에 붙임 (exd5)
+	if piece.type == Piece.Type.PAWN and is_capture:
+		text += to_algebraic(from)[0]
+	
+	if is_capture:
+		text += "x"
+	
+	text += to_algebraic(to)
+	
+	# 승격
+	if piece.type == Piece.Type.PAWN and (to.y == 0 or to.y == 7):
+		text += "=" + PIECE_LETTERS[before.promotion_choice]
+	
+	# 체크 / 체크메이트 (이동 후 판 기준)
+	if chess_board.is_checkmate(chess_board.turn):
+		text += "#"
+	elif chess_board.is_in_check(chess_board.turn):
+		text += "+"
+	
+	return text
 
 # ─────────────────────────────────────────────
 # 준비
@@ -110,10 +152,19 @@ func to_algebraic(pos: Vector2i) -> String:
 func _ready() -> void:
 	_load_textures()
 	_create_board()
-	_setup_promotion_panel()
+	_setup_promotion_buttons()
 	chess_board.setup_initial()
 	_refresh()
+	
+func _setup_promotion_buttons() -> void:
+	var box := %PromotionPanel.get_node("VBoxContainer/HBoxContainer")
+	var types := [Piece.Type.QUEEN, Piece.Type.ROOK, Piece.Type.BISHOP, Piece.Type.KNIGHT]
+	var buttons := box.get_children()
+	for i in buttons.size():
+		buttons[i].pressed.connect(_on_promotion_button.bind(types[i]))
 
+func _on_promotion_button(type: Piece.Type) -> void:
+	promotion_selected.emit(type)
 
 func _load_textures() -> void:
 	var sheet: Texture2D = load(SHEET_PATH)
@@ -142,18 +193,14 @@ func _create_board() -> void:
 			square.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			board_visual.add_child(square)
 
-
-func _setup_promotion_panel() -> void:
-	%PromotionPanel.hide()
-	var buttons := %PromotionPanel.get_node("HBoxContainer").get_children()
-	for i in mini(buttons.size(), PROMOTION_TYPES.size()):
-		buttons[i].pressed.connect(_on_promotion_button.bind(PROMOTION_TYPES[i]))
-
 # ─────────────────────────────────────────────
 # 입력
 # ─────────────────────────────────────────────
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("undo"):
+		undo()
+		return
 	if awaiting_promotion:
 		return
 	if event is not InputEventMouseButton:
@@ -167,6 +214,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
+	if awaiting_promotion:
+		return
+	if chess_board.get_result() != ChessBoard.Result.ONGOING:
+		return
 	if chess_board.is_game_over():
 		return
 
@@ -183,24 +234,40 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		elif clicked_piece != null and clicked_piece.side == chess_board.turn:
 			_select(cell)                                  # 내 다른 기물 → 선택 변경
 		elif cell in legal_moves:
-			await _do_move(selected, cell)                 # 그 외 → 이동
+			var piece := chess_board.get_piece(selected)
+			if piece.type == Piece.Type.PAWN and (cell.y == 0 or cell.y == 7):
+				chess_board.promotion_choice = await _ask_promotion()
+			_do_move(selected, cell)
 		# 갈 수 없는 칸이면 아무것도 안 함
 
 	_refresh()
 
 
 func _do_move(from: Vector2i, to: Vector2i) -> void:
-	var piece := chess_board.get_piece(from)
-	var is_promotion := piece.type == Piece.Type.PAWN and (to.y == 0 or to.y == BOARD_SIZE - 1)
-
-	if is_promotion:
-		chess_board.promotion_choice = await _ask_promotion()
-
+	var before := chess_board.snapshot()      # ← 변수로 받아둠
+	history.append(before)
+	
 	chess_board.move_piece(from, to)
 	chess_board.switch_turn()
 	chess_board.record_position()
 	chess_board.update_result()
+	
+	notations.append(_to_notation(from, to, before))
+	last_move = [from, to]
 	_deselect()
+
+func undo() -> void:
+	if history.is_empty():
+		return
+	
+	chess_board = history.pop_back()
+	
+	if not notations.is_empty():
+		notations.pop_back()
+	
+	last_move = []
+	_deselect()
+	_refresh()
 
 
 func _ask_promotion() -> Piece.Type:
@@ -210,11 +277,6 @@ func _ask_promotion() -> Piece.Type:
 	%PromotionPanel.hide()
 	awaiting_promotion = false
 	return choice
-
-
-func _on_promotion_button(type: Piece.Type) -> void:
-	promotion_selected.emit(type)
-
 
 func _select(cell: Vector2i) -> void:
 	selected = cell
@@ -233,6 +295,7 @@ func _refresh() -> void:
 	_update_pieces()
 	_update_highlight()
 	_update_ui()
+	_update_move_log()
 
 
 func _update_pieces() -> void:
@@ -260,22 +323,22 @@ func _spawn_piece_sprite(piece: Piece, pos: Vector2i) -> void:
 
 	piece_visual.add_child(sprite)
 
-
 func _update_highlight() -> void:
 	for child in highlight_visual.get_children():
 		child.queue_free()
-
-	# 체크 표시를 먼저 그려서 뒤에 깔리게 한다
+	
+	for pos in last_move:
+		_add_highlight(pos, COLOR_LAST)
+	
 	if chess_board.is_in_check(chess_board.turn):
 		var king_pos := chess_board.find_king(chess_board.turn)
 		if chess_board.is_inside(king_pos):
 			_add_highlight(king_pos, COLOR_CHECK)
-
+	
 	if not is_inside(selected):
 		return
-
+	
 	_add_highlight(selected, COLOR_SELECT)
-
 	for move in legal_moves:
 		var color := COLOR_CAPTURE if not chess_board.is_empty(move) else COLOR_MOVE
 		_add_highlight(move, color)
@@ -302,3 +365,14 @@ func _update_ui() -> void:
 	if chess_board.is_in_check(chess_board.turn):
 		text += "  — 체크!"
 	%TurnLabel.text = text
+	
+func _update_move_log() -> void:
+	var lines: Array[String] = []
+	
+	for i in range(0, notations.size(), 2):
+		var num := i / 2 + 1
+		var white_move: String = notations[i]
+		var black_move: String = notations[i + 1] if i + 1 < notations.size() else ""
+		lines.append("%d. %s %s" % [num, white_move, black_move])
+	
+	%MoveLogLabel.text = "\n".join(lines)

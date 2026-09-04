@@ -13,6 +13,16 @@ script = ExtResource("1_ig7tw")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=213824271]
 
+[node name="MoveLog" type="ScrollContainer" parent="UI" unique_id=1760701530]
+offset_left = 11.0
+offset_top = 125.0
+offset_right = 97.0
+offset_bottom = 766.0
+
+[node name="MoveLogLabel" type="Label" parent="UI/MoveLog" unique_id=385241050]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="TurnLabel" type="Label" parent="UI" unique_id=616490680]
 unique_name_in_owner = true
 offset_left = 80.0
@@ -24,30 +34,45 @@ theme_override_font_sizes/font_size = 24
 [node name="PromotionPanel" type="Panel" parent="UI" unique_id=906651673]
 unique_name_in_owner = true
 visible = false
-offset_left = 68.0
-offset_top = 65.0
-offset_right = 760.0
-offset_bottom = 760.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -346.0
+offset_top = -347.5
+offset_right = 14.0
+offset_bottom = -227.5
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="UI/PromotionPanel" unique_id=1439680254]
-layout_mode = 0
-offset_left = 130.0
-offset_top = 199.0
-offset_right = 613.0
-offset_bottom = 522.0
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/PromotionPanel" unique_id=342980134]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="Queen" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=1958520696]
+[node name="Label" type="Label" parent="UI/PromotionPanel/VBoxContainer" unique_id=147180349]
+layout_mode = 2
+text = "승격할 기물 선택"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/PromotionPanel/VBoxContainer" unique_id=1209314443]
+layout_mode = 2
+
+[node name="Button" type="Button" parent="UI/PromotionPanel/VBoxContainer/HBoxContainer" unique_id=604499208]
 layout_mode = 2
 text = "퀸"
 
-[node name="Rook" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=406574856]
+[node name="Button2" type="Button" parent="UI/PromotionPanel/VBoxContainer/HBoxContainer" unique_id=795616938]
 layout_mode = 2
 text = "룩"
 
-[node name="Bishop" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=2138790565]
+[node name="Button3" type="Button" parent="UI/PromotionPanel/VBoxContainer/HBoxContainer" unique_id=1184582184]
 layout_mode = 2
-text = "비"
+text = "비숍"
 
-[node name="Knight" type="Button" parent="UI/PromotionPanel/HBoxContainer" unique_id=670900820]
+[node name="Button4" type="Button" parent="UI/PromotionPanel/VBoxContainer/HBoxContainer" unique_id=1799119018]
 layout_mode = 2
 text = "나이트"
