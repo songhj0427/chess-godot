@@ -87,6 +87,7 @@ var awaiting_promotion: bool = false
 var history: Array[ChessBoard] = []
 var notations: Array[String] = []
 var last_move: Array[Vector2i] = []
+var animating: bool = false
 
 signal promotion_selected(type: Piece.Type)
 
@@ -201,7 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("undo"):
 		undo()
 		return
-	if awaiting_promotion:
+	if animating or awaiting_promotion:
 		return
 	if event is not InputEventMouseButton:
 		return
@@ -214,7 +215,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_cell_clicked(cell: Vector2i) -> void:
-	if awaiting_promotion:
+	if animating or awaiting_promotion:
 		return
 	if chess_board.get_result() != ChessBoard.Result.ONGOING:
 		return
@@ -237,15 +238,21 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			var piece := chess_board.get_piece(selected)
 			if piece.type == Piece.Type.PAWN and (cell.y == 0 or cell.y == 7):
 				chess_board.promotion_choice = await _ask_promotion()
-			_do_move(selected, cell)
+			await _do_move(selected, cell)
 		# 갈 수 없는 칸이면 아무것도 안 함
 
 	_refresh()
 
 
 func _do_move(from: Vector2i, to: Vector2i) -> void:
-	var before := chess_board.snapshot()      # ← 변수로 받아둠
+	var before := chess_board.snapshot()
 	history.append(before)
+	
+	var is_capture := not chess_board.is_empty(to) or to == chess_board.en_passant_target
+	
+	animating = true
+	await _animate_move(from, to)
+	animating = false
 	
 	chess_board.move_piece(from, to)
 	chess_board.switch_turn()
@@ -254,6 +261,12 @@ func _do_move(from: Vector2i, to: Vector2i) -> void:
 	
 	notations.append(_to_notation(from, to, before))
 	last_move = [from, to]
+	
+	if is_capture:
+		$CaptureSound.play()
+	else:
+		$MoveSound.play()
+	
 	_deselect()
 
 func undo() -> void:
@@ -316,11 +329,12 @@ func _spawn_piece_sprite(piece: Piece, pos: Vector2i) -> void:
 	var sprite := Sprite2D.new()
 	sprite.texture = textures[key]
 	sprite.position = board_to_screen(pos) + Vector2.ONE * SQUARE_SIZE * 0.5
-
+	sprite.set_meta("cell", pos)
+	
 	var tex_size := sprite.texture.get_size()
 	var fit := SQUARE_SIZE * 0.85 / maxf(tex_size.x, tex_size.y)
 	sprite.scale = Vector2.ONE * fit
-
+	
 	piece_visual.add_child(sprite)
 
 func _update_highlight() -> void:
@@ -376,3 +390,27 @@ func _update_move_log() -> void:
 		lines.append("%d. %s %s" % [num, white_move, black_move])
 	
 	%MoveLogLabel.text = "\n".join(lines)
+	
+# ─────────────────────────────────────────────
+# 애니메이션
+# ─────────────────────────────────────────────
+
+func _find_sprite_at(pos: Vector2i) -> Sprite2D:
+	for child in piece_visual.get_children():
+		if child.get_meta("cell", Vector2i(-1, -1)) == pos:
+			return child
+	return null
+
+func _animate_move(from: Vector2i, to: Vector2i) -> void:
+	var sprite := _find_sprite_at(from)
+	if sprite == null:
+		return
+	
+	var target := board_to_screen(to) + Vector2.ONE * SQUARE_SIZE * 0.5
+	
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(sprite, "position", target, 0.15)
+	
+	await tween.finished

@@ -1,6 +1,8 @@
 [gd_scene format=3 uid="uid://bqjusa3sks5ll"]
 
 [ext_resource type="Script" uid="uid://nkcb0nkbulas" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="AudioStream" uid="uid://csjl1547us4hr" path="res://assets/sounds/move-self.mp3" id="2_h2yge"]
+[ext_resource type="AudioStream" uid="uid://c8bohbgqwx40f" path="res://assets/sounds/capture.mp3" id="3_1bvp3"]
 
 [node name="Main" type="Node2D" unique_id=1134712690]
 script = ExtResource("1_ig7tw")
@@ -76,3 +78,12 @@ text = "비숍"
 [node name="Button4" type="Button" parent="UI/PromotionPanel/VBoxContainer/HBoxContainer" unique_id=1799119018]
 layout_mode = 2
 text = "나이트"
+
+[node name="MoveSound" type="AudioStreamPlayer2D" parent="." unique_id=1038756424]
+stream = ExtResource("2_h2yge")
+volume_db = 13.424
+pitch_scale = 0.99
+
+[node name="CaptureSound" type="AudioStreamPlayer2D" parent="." unique_id=83407413]
+stream = ExtResource("3_1bvp3")
+volume_db = 13.145
